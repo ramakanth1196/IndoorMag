@@ -87,4 +87,8 @@ public interface IReckoningMethod {
 	public float getTurnNoise ();
 	
 	public double getMMSE();
+	
+	public String getPath();
+	
+	
 }

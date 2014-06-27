@@ -8,8 +8,7 @@ package in.ernet.iitr.puttauec.sensorutil;
  public class MatrixLib
 	{   private final int M;
 	    private final int N;
-		public double[][] in_Mat;
-      
+		public double[][] in_Mat;      
 		/// <summary>
 		/// MatrixLib object constructor, constructs an empty
 		/// matrix with dimensions: rows = noRows and cols = noCols.

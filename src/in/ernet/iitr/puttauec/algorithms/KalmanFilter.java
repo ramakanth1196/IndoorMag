@@ -81,7 +81,32 @@ public class KalmanFilter implements IAngleAlgorithm
              return y;
          }
      }
+    	 double norm;
+         MatrixLib temp;//=new MatrixLib(4,4);
+         MatrixLib dq = new MatrixLib(4, 1);
+         double mu;
+         
+         double q1,q2,q3,q4;
+         MatrixLib h = new MatrixLib(4, 1);     //magnetic field
+         MatrixLib f_obb = new MatrixLib(6, 1);
+         MatrixLib Jacobian = new MatrixLib(6, 4);
+         MatrixLib temp2;
+         MatrixLib Df = new MatrixLib(4, 1);
+         double norm2;
+         double bx, bz, by;
+         MatrixLib result = new MatrixLib(4, 1);
+         
+         //compute the direction of the magnetic field
+         MatrixLib quaternion;
+         MatrixLib quaternion_conjugate; 
 
+         double a1,a2,a3,a4,b1,b2,b3,b4;
+         MatrixLib result2 = new MatrixLib(4, 1);
+         
+         MatrixLib quaternion2 = new MatrixLib(4, 1);
+         
+         double[] quat = {0.0,0.0,0.0,0.0};
+	
         private double gyroOffRoll = 0;//-0.3866;
         private double gyroOffPitch = 0;//-3.5042;
         private double gyroOffYaw = 0;//2.7279;
@@ -132,7 +157,8 @@ public class KalmanFilter implements IAngleAlgorithm
         double w_y_old = 0;
         double w_z_old = 0;
 
-
+        double sigmaRoll = 0.0, sigmaPitch = 0.0, sigmaYaw = 0.0;
+        
         MatrixLib F = new MatrixLib(4, 4);
         MatrixLib H = new MatrixLib(MatrixLib.Identity(4));
         MatrixLib Q = new MatrixLib(4, 4);
@@ -157,9 +183,9 @@ public class KalmanFilter implements IAngleAlgorithm
         public KalmanFilter()
         {
             //this.param = param;
-            double sigmaRoll = Math.pow((gyroVarX / 180 * Math.PI), 2);           //the variance of the roll measure
-            double sigmaPitch = Math.pow((gyroVarY / 180 * Math.PI), 2);          //the variance of the pitch measure
-            double sigmaYaw = Math.pow((gyroVarZ / 180 * Math.PI), 2);            //the variance of the yaw measure
+            sigmaRoll = Math.pow((gyroVarX / 180 * Math.PI), 2);           //the variance of the roll measure
+            sigmaPitch = Math.pow((gyroVarY / 180 * Math.PI), 2);          //the variance of the pitch measure
+            sigmaYaw = Math.pow((gyroVarZ / 180 * Math.PI), 2);            //the variance of the yaw measure
             
           //  dt = 1.0 / param.freq;  
 
@@ -260,11 +286,7 @@ public class KalmanFilter implements IAngleAlgorithm
 
         public void update(double w_x, double w_y, double w_z, double a_x, double a_y, double a_z, double m_x, double m_y, double m_z, double dt)
         {
-            double norm;
-            MatrixLib temp;//=new MatrixLib(4,4);
-            MatrixLib dq = new MatrixLib(4, 1);
-            double mu;
-
+          
             // normalise the accelerometer measurement
             norm = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z);
             a_x /= norm;
@@ -438,145 +460,134 @@ public class KalmanFilter implements IAngleAlgorithm
 
         private MatrixLib GradientDescent(double a_x, double a_y, double a_z, double m_x, double m_y, double m_z, double mu)
         {
-            int i = 0;
-            double q1,q2,q3,q4;
-            MatrixLib h = new MatrixLib(4, 1);     //magnetic field
-            MatrixLib f_obb = new MatrixLib(6, 1);
-            MatrixLib Jacobian = new MatrixLib(6, 4);
-            MatrixLib temp;
-            MatrixLib Df = new MatrixLib(4, 1);
-            double norm;
-            double bx, bz, by;
-            MatrixLib result = new MatrixLib(4, 1);
+        	int i = 0;
             //m_x = m_x + 0.32;
             //m_y = m_y + 0.1;
             //oss=sf*reading+offset
-          //  m_x = (param.magnSFX * m_x) + param.magnOffX;
-          //  m_y = (param.magnSFY * m_y) + param.magnOffY;
-          // m_z = (param.magnSFZ * m_z) + param.magnOffZ;
+            //  m_x = (param.magnSFX * m_x) + param.magnOffX;
+            //  m_y = (param.magnSFY * m_y) + param.magnOffY;
+            // m_z = (param.magnSFZ * m_z) + param.magnOffZ;
 
-            q1 = state_observed.in_Mat[0][0];
-            q2 = state_observed.in_Mat[1][0];
-            q3 = state_observed.in_Mat[2][0];
-            q4 = state_observed.in_Mat[3][0];
+              q1 = state_observed.in_Mat[0][0];
+              q2 = state_observed.in_Mat[1][0];
+              q3 = state_observed.in_Mat[2][0];
+              q4 = state_observed.in_Mat[3][0];
 
-            while (i < 1)
-            {
-                //compute the direction of the magnetic field
-                MatrixLib quaternion = newQuaternion(q1,q2,q3,q4);
-                MatrixLib quaternion_conjugate = newQuaternion(q1,-q2,-q3,-q4);
+              while (i < 1)
+              {
+                  //compute the direction of the magnetic field
+                  quaternion = newQuaternion(q1,q2,q3,q4);
+                  quaternion_conjugate = newQuaternion(q1,-q2,-q3,-q4);
 
-                //magnetic field compensation
-                temp = QuaternionProduct(quaternion, newQuaternion(0.0,m_x, m_y, m_z));
-                h = QuaternionProduct(temp, quaternion_conjugate);
-                bx = Math.sqrt((h.in_Mat[1][0] * h.in_Mat[1][0] + h.in_Mat[2][0] * h.in_Mat[2][0]));
-                bz = h.in_Mat[3][0];
-
-
-                //bx = h.in_Mat[1][0];
-                //by = h.in_Mat[2][0];
-                //bz = h.in_Mat[3][0];
-
-                norm = Math.sqrt(bx * bx + bz * bz);
-                bx /= norm;
-                by = 0;
-                bz /= norm;
+                  //magnetic field compensation
+                  temp2 = QuaternionProduct(quaternion, newQuaternion(0.0,m_x, m_y, m_z));
+                  h = QuaternionProduct(temp2, quaternion_conjugate);
+                  bx = Math.sqrt((h.in_Mat[1][0] * h.in_Mat[1][0] + h.in_Mat[2][0] * h.in_Mat[2][0]));
+                  bz = h.in_Mat[3][0];
 
 
-                //compute the objective functions
-                f_obb.in_Mat[0][0] = 2 * (q2 * q4 - q1 * q3) - a_x;
-                f_obb.in_Mat[1][0] = 2 * (q1 * q2 + q3 * q4) - a_y;
-                f_obb.in_Mat[2][0] = 2 * (0.5 - q2 * q2 - q3 * q3) - a_z;
-                f_obb.in_Mat[3][0] = 2 * bx * (0.5 - q3 * q3 - q4 * q4) + 2 * by * (q1 * q4 + q2 * q3) + 2 * bz * (q2 * q4 - q1 * q3) - m_x;
-                f_obb.in_Mat[4][ 0] = 2 * bx * (q2 * q3 - q1 * q4) + 2 * by * (0.5 - q2 * q2 - q4 * q4) + 2 * bz * (q1 * q2 + q3 * q4) - m_y;
-                f_obb.in_Mat[5][ 0] = 2 * bx * (q1 * q3 + q2 * q4) + 2 * by * (q3 * q4 - q1 * q2) + 2 * bz * (0.5 - q2 * q2 - q3 * q3) - m_z;
+                  //bx = h.in_Mat[1][0];
+                  //by = h.in_Mat[2][0];
+                  //bz = h.in_Mat[3][0];
 
-                //compute the jacobian
-                Jacobian.in_Mat[0][0] = -2 * q3;
-                Jacobian.in_Mat[0][1] = 2 * q4;
-                Jacobian.in_Mat[0][2] = -2 * q1;
-                Jacobian.in_Mat[0][3] = 2 * q2;
-                Jacobian.in_Mat[1][0] = 2 * q2;
-                Jacobian.in_Mat[1][1] = 2 * q1;
-                Jacobian.in_Mat[1][2] = 2 * q4;
-                Jacobian.in_Mat[1][3] = 2 * q3;
-                Jacobian.in_Mat[2][0] = 0;
-                Jacobian.in_Mat[2][1] = -4 * q2;
-                Jacobian.in_Mat[2][2] = -4 * q3;
-                Jacobian.in_Mat[2][3] = 0;
+                  norm2 = Math.sqrt(bx * bx + bz * bz);
+                  bx /= norm2;
+                  by = 0;
+                  bz /= norm2;
 
-                Jacobian.in_Mat[3][0] = 2 * by * q4 - 2 * bz * q3;
-                Jacobian.in_Mat[3][1] = 2 * by * q3 + 2 * bz * q4;
-                Jacobian.in_Mat[3][2] = -4 * bx * q3 + 2 * by * q2 - 2 * bz * q1;
-                Jacobian.in_Mat[3][3] = -4 * bx * q4 + 2 * by * q1 + 2 * bz * q2;
-                Jacobian.in_Mat[4][0] = -2 * bx * q4 + 2 * bz * q2;
-                Jacobian.in_Mat[4][1] = 2 * bx * q3 - 4 * by * q2 + 2 * bz * q1;
-                Jacobian.in_Mat[4][2] = 2 * bx * q2 + 2 * bz * q4;
-                Jacobian.in_Mat[4][3] = -2 * bx * q1 - 4 * by * q4 + 2 * bz * q3;
-                Jacobian.in_Mat[5][0] = 2 * bx * q3 - 2 * by * q2;
-                Jacobian.in_Mat[5][1] = 2 * bx * q4 - 2 * by * q1 - 4 * bz * q2;
-                Jacobian.in_Mat[5][2] = 2 * bx * q1 + 2 * by * q4 - 4 * bz * q3;
-                Jacobian.in_Mat[5][3] = 2 * bx * q2 + 2 * by * q3;
 
-                Df = MatrixLib.Multiply(MatrixLib.Transpose(Jacobian), f_obb);
-                norm = Math.sqrt(Df.in_Mat[0][0] * Df.in_Mat[0][0] + Df.in_Mat[1][0] * Df.in_Mat[1][0] + Df.in_Mat[2][0] * Df.in_Mat[2][0] + Df.in_Mat[3][0] * Df.in_Mat[3][0]);
-                Df = MatrixLib.ScalarDivide(norm, Df);
+                  //compute the objective functions
+                  f_obb.in_Mat[0][0] = 2 * (q2 * q4 - q1 * q3) - a_x;
+                  f_obb.in_Mat[1][0] = 2 * (q1 * q2 + q3 * q4) - a_y;
+                  f_obb.in_Mat[2][0] = 2 * (0.5 - q2 * q2 - q3 * q3) - a_z;
+                  f_obb.in_Mat[3][0] = 2 * bx * (0.5 - q3 * q3 - q4 * q4) + 2 * by * (q1 * q4 + q2 * q3) + 2 * bz * (q2 * q4 - q1 * q3) - m_x;
+                  f_obb.in_Mat[4][ 0] = 2 * bx * (q2 * q3 - q1 * q4) + 2 * by * (0.5 - q2 * q2 - q4 * q4) + 2 * bz * (q1 * q2 + q3 * q4) - m_y;
+                  f_obb.in_Mat[5][ 0] = 2 * bx * (q1 * q3 + q2 * q4) + 2 * by * (q3 * q4 - q1 * q2) + 2 * bz * (0.5 - q2 * q2 - q3 * q3) - m_z;
 
-                result = MatrixLib.Subtract(quaternion , MatrixLib.ScalarMultiply (mu, Df));
+                  //compute the jacobian
+                  Jacobian.in_Mat[0][0] = -2 * q3;
+                  Jacobian.in_Mat[0][1] = 2 * q4;
+                  Jacobian.in_Mat[0][2] = -2 * q1;
+                  Jacobian.in_Mat[0][3] = 2 * q2;
+                  Jacobian.in_Mat[1][0] = 2 * q2;
+                  Jacobian.in_Mat[1][1] = 2 * q1;
+                  Jacobian.in_Mat[1][2] = 2 * q4;
+                  Jacobian.in_Mat[1][3] = 2 * q3;
+                  Jacobian.in_Mat[2][0] = 0;
+                  Jacobian.in_Mat[2][1] = -4 * q2;
+                  Jacobian.in_Mat[2][2] = -4 * q3;
+                  Jacobian.in_Mat[2][3] = 0;
 
-                q1 = result.in_Mat[0][0];
-                q2 = result.in_Mat[1][0];
-                q3 = result.in_Mat[2][0];
-                q4 = result.in_Mat[3][0];
+                  Jacobian.in_Mat[3][0] = 2 * by * q4 - 2 * bz * q3;
+                  Jacobian.in_Mat[3][1] = 2 * by * q3 + 2 * bz * q4;
+                  Jacobian.in_Mat[3][2] = -4 * bx * q3 + 2 * by * q2 - 2 * bz * q1;
+                  Jacobian.in_Mat[3][3] = -4 * bx * q4 + 2 * by * q1 + 2 * bz * q2;
+                  Jacobian.in_Mat[4][0] = -2 * bx * q4 + 2 * bz * q2;
+                  Jacobian.in_Mat[4][1] = 2 * bx * q3 - 4 * by * q2 + 2 * bz * q1;
+                  Jacobian.in_Mat[4][2] = 2 * bx * q2 + 2 * bz * q4;
+                  Jacobian.in_Mat[4][3] = -2 * bx * q1 - 4 * by * q4 + 2 * bz * q3;
+                  Jacobian.in_Mat[5][0] = 2 * bx * q3 - 2 * by * q2;
+                  Jacobian.in_Mat[5][1] = 2 * bx * q4 - 2 * by * q1 - 4 * bz * q2;
+                  Jacobian.in_Mat[5][2] = 2 * bx * q1 + 2 * by * q4 - 4 * bz * q3;
+                  Jacobian.in_Mat[5][3] = 2 * bx * q2 + 2 * by * q3;
 
-                norm = Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
-                result = MatrixLib.ScalarDivide(norm, result);
+                  Df = MatrixLib.Multiply(MatrixLib.Transpose(Jacobian), f_obb);
+                  norm2 = Math.sqrt(Df.in_Mat[0][0] * Df.in_Mat[0][0] + Df.in_Mat[1][0] * Df.in_Mat[1][0] + Df.in_Mat[2][0] * Df.in_Mat[2][0] + Df.in_Mat[3][0] * Df.in_Mat[3][0]);
+                  Df = MatrixLib.ScalarDivide(norm2, Df);
 
-                q1 = result.in_Mat[0][0];
-                q2 = result.in_Mat[1][0];
-                q3 = result.in_Mat[2][0];
-                q4 = result.in_Mat[3][0];
+                  result = MatrixLib.Subtract(quaternion , MatrixLib.ScalarMultiply (mu, Df));
 
-                i = i + 1;
-            }
+                  q1 = result.in_Mat[0][0];
+                  q2 = result.in_Mat[1][0];
+                  q3 = result.in_Mat[2][0];
+                  q4 = result.in_Mat[3][0];
 
-            return result;
+                  norm2 = Math.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
+                  result = MatrixLib.ScalarDivide(norm2, result);
+
+                  q1 = result.in_Mat[0][0];
+                  q2 = result.in_Mat[1][0];
+                  q3 = result.in_Mat[2][0];
+                  q4 = result.in_Mat[3][0];
+
+                  i = i + 1;
+              }
+
+              return result;
         }
 
         private MatrixLib QuaternionProduct(MatrixLib quaternion, MatrixLib matrix)
-        {
-            double a1 = quaternion.in_Mat[0][0];
-            double a2 = quaternion.in_Mat[1][0];
-            double a3 = quaternion.in_Mat[2][0];
-            double a4 = quaternion.in_Mat[3][0];
-            double b1 = matrix.in_Mat[0][0];
-            double b2 = matrix.in_Mat[1][0];
-            double b3 = matrix.in_Mat[2][0];
-            double b4 = matrix.in_Mat[3][0];
+        {   a1 = quaternion.in_Mat[0][0];
+            a2 = quaternion.in_Mat[1][0];
+            a3 = quaternion.in_Mat[2][0];
+            a4 = quaternion.in_Mat[3][0];
+            b1 = matrix.in_Mat[0][0];
+            b2 = matrix.in_Mat[1][0];
+            b3 = matrix.in_Mat[2][0];
+            b4 = matrix.in_Mat[3][0];
+            
+            result2.in_Mat[0][0] = a1 * b1 - a2 * b2 - a3 * b3 - a4 * b4;
+            result2.in_Mat[1][0] = a1 * b2 + a2 * b1 + a3 * b4 - a4 * b3;
+            result2.in_Mat[2][0] = a1 * b3 - a2 * b4 + a3 * b1 + a4 * b2;
+            result2.in_Mat[3][0] = a1 * b4 + a2 * b3 - a3 * b2 + a4 * b1;
 
-            MatrixLib result = new MatrixLib(4, 1);
-            result.in_Mat[0][0] = a1 * b1 - a2 * b2 - a3 * b3 - a4 * b4;
-            result.in_Mat[1][0] = a1 * b2 + a2 * b1 + a3 * b4 - a4 * b3;
-            result.in_Mat[2][0] = a1 * b3 - a2 * b4 + a3 * b1 + a4 * b2;
-            result.in_Mat[3][0] = a1 * b4 + a2 * b3 - a3 * b2 + a4 * b1;
-
-            return result;
-
+            return result2;
         }
 
         private MatrixLib newQuaternion(double p, double m_x, double m_y, double m_z)
         {
-            MatrixLib quaternion = new MatrixLib(4, 1);
-            quaternion.in_Mat[0][0] = p;
-            quaternion.in_Mat[1][0] = m_x;
-            quaternion.in_Mat[2][0] = m_y;
-            quaternion.in_Mat[3][0] = m_z;
-            return quaternion;
+            quaternion2.in_Mat[0][0] = p;
+            quaternion2.in_Mat[1][0] = m_x;
+            quaternion2.in_Mat[2][0] = m_y;
+            quaternion2.in_Mat[3][0] = m_z;
+            return quaternion2;
         }
-        
+       
         public double[] quaternion_values()
-        { double[] quat = {q_filt1,q_filt2,q_filt3,q_filt4};
+        { quat[0] = q_filt1;
+          quat[1] = q_filt2;
+          quat[2] = q_filt3;
+          quat[3] = q_filt4;
           return quat;
         }
-
  }

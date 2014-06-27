@@ -33,7 +33,7 @@ public class DeadReckoning extends DefaultSensorCallbacks implements IAlgorithm,
 	     
 	protected String STORAGE_DIR = SAMPLES_DIR + File.separator + "dr";
 	private static final int DEFAULT_MAP_HEIGHT = 26;
-	private static final int DEFAULT_MAP_WIDTH = 16;
+	private static final int DEFAULT_MAP_WIDTH = 14;
 	private static final int MAX_HISTORY_SIZE = 10;
 	private static final String TAG = "DeadReckoning";
 	private static final int PEAK_HUNT = 0;
@@ -41,8 +41,8 @@ public class DeadReckoning extends DefaultSensorCallbacks implements IAlgorithm,
     protected static double mmse;
 	
 	// These constants are expected to be divided by 1000 before use
-	public static final int DEFAULT_TRAINING_CONSTANT = 770; // 5200; // 3300; // 1937;
-	public static final int DEFAULT_ACCEL_THRESHOLD = 1300; // 1840; //1300 /1400 //1500 
+	public static final int DEFAULT_TRAINING_CONSTANT = 805; //770  //850  //810
+	public static final int DEFAULT_ACCEL_THRESHOLD = 1200; // 1840; //1300 /1400 //1500 
 	
 	// Instance variables
 	LinkedList<float[]> mAccelHistory;
@@ -130,7 +130,7 @@ public class DeadReckoning extends DefaultSensorCallbacks implements IAlgorithm,
 				if(s2 - s1 < 0 && s1 > 0) { // Peak Found
 					if(mState == PEAK_HUNT) {
 						// Count previous peak+valley pair and start off new counting. 
-						if(timestamp-prevSteptimestamp > 100*1000)
+						if(timestamp-prevSteptimestamp > 250*1000)
 							{ ++mStepCount;
 						       prevSteptimestamp = timestamp; }
 						else {return;}
@@ -139,7 +139,7 @@ public class DeadReckoning extends DefaultSensorCallbacks implements IAlgorithm,
 						double radAngle = getAngleRadians();
 						
 						double offset = Math.toRadians(5); // 5 degree offset because of map
-						radAngle -= offset;
+					//	radAngle -= offset;
 						if(radAngle < -Math.PI)
 							radAngle += 2*Math.PI;
 						
@@ -594,5 +594,10 @@ public class DeadReckoning extends DefaultSensorCallbacks implements IAlgorithm,
 	public double getMMSE() {
 		return  0.0;
 	}
+	@Override
+	public String getPath() {
+       return "";
+     }
+	
 }
 

@@ -3,6 +3,7 @@ package in.ernet.iitr.puttauec.ui;
 import in.ernet.iitr.puttauec.R;
 import in.ernet.iitr.puttauec.algorithms.AHRS;
 import in.ernet.iitr.puttauec.algorithms.DeadReckoning;
+import in.ernet.iitr.puttauec.algorithms.KalmanFilter;
 import in.ernet.iitr.puttauec.algorithms.ParticleFiltering;
 import in.ernet.iitr.puttauec.algorithms.ParticleFilteringAHRSMag;
 import in.ernet.iitr.puttauec.algorithms.ParticleFilteringAHRSMagMap;
@@ -26,7 +27,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
@@ -70,9 +70,7 @@ public class ParticleFilteringActivity extends Activity {
 		
 	    switch(method) {		    
 		case PF_RECKONING_AHRS_VECTOR_MAP:
-			System.out.println("a");								
 			mDeadReckoning = new ParticleFiltering(this, new AHRS());
-			System.out.println("b");
 			break;
 
 		case PF_RECKONING_AHRS_MAGNITUDE_MAP:
@@ -80,7 +78,7 @@ public class ParticleFilteringActivity extends Activity {
 			break;
 		
 		case PF_RECKONING_KALMAN:
-			mDeadReckoning = new ParticleFilteringKalman(this, new AHRS());
+			mDeadReckoning = new ParticleFilteringKalman(this, new KalmanFilter());
 			break;
 		
 		case PF_RECKONING_AHRS_MAGNITUDE:
@@ -197,7 +195,7 @@ public class ParticleFilteringActivity extends Activity {
 		case PARFIL_RECKONING_LOG_PATH:
 			Date now = new Date(System.currentTimeMillis());
 			try {
-				FileWriter pathLoggingFile = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples", "pfPathLog." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now) + ".csv"));
+				FileWriter pathLoggingFile = new FileWriter(new File( mDeadReckoning.getPath() , "pfPathLog." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now) + ".csv"));
 				ArrayList<float[]> path = mDeadReckoning.getmPath();
 				for(float[] p : path) {
 					pathLoggingFile.write(p[0] + "," + p[1] + "\n");
@@ -289,7 +287,7 @@ public class ParticleFilteringActivity extends Activity {
 		            				
 		            				Date now = new Date(System.currentTimeMillis());
 		            				try {
-		            					FileWriter stepDistance = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples", "stepDistance." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now)));
+		            					FileWriter stepDistance = new FileWriter(new File( mDeadReckoning.getPath(), "stepDistance." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now)));
 			            				stepDistance.write("" + now.getTime() + "," + + numSteps + "," + actualDistance + "," + estimatedDistance + "," + distancePerStep + "," + trainingConstant + "\n");
 			            				stepDistance.flush();
 										stepDistance.close();

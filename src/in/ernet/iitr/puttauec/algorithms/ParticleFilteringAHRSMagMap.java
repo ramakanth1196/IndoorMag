@@ -23,7 +23,7 @@ import android.util.Log;
 public class ParticleFilteringAHRSMagMap extends DeadReckoning {
 	   //constants
        private static final String TAG = "PaicleFilterReckoning";
-        public static final int DEFAULT_PARTICLE_COUNT = 100; //1000 //2000
+        public static final int DEFAULT_PARTICLE_COUNT = 400; //1000 //2000
 	   public static final int DEFAULT_STEP_NOISE_THRESHOLD = 200; // 400  //600 //800 //1000 //1500 
 	   public static final int DEFAULT_SENSE_NOISE_THRESHOLD = 4000; //2000 //10000  //15000
 	   public static final int DEFAULT_TURN_NOISE_THRESHOLD = 90; //2000 //10000  //15000
@@ -31,11 +31,11 @@ public class ParticleFilteringAHRSMagMap extends DeadReckoning {
 	   private static final double INIT_SD_Y = 0.4;	  
 	   private static final double X_SD = 1.4;
 	   private static final double Y_SD = 1.4;	   	  
-	   private static final double  minX  = 0.0  ; 
-	   private static  double  maxX  = 16.0 ;  
-	   private static final double  minY  = 0.0 ;  
-	   private static final double  maxY  = 26.0 ; 
-	   private static final double mul =(180/Math.PI);
+	   private static double  minX  = 0.0  ; 
+	   private static double  maxX  = 14.0 ;  
+	   private static double  minY  = 0.0 ;  
+	   private static double  maxY  = 26.0 ; 
+	      private static final double mul =(180/Math.PI);
 	  // private static final double xoffset = 12.8375610466;
 	  // private static final double yoffset = -0.0999689574027;
 	   
@@ -150,7 +150,7 @@ public class Particle
 		public ParticleFilteringAHRSMagMap(Context ctx, IAngleAlgorithm algorithm) {
 			super(ctx);   
 			//Load the indoor Map
-			mFloorPlan = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.library4);
+			mFloorPlan = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.library5);
 			mFloorPlan = mFloorPlan.copy(Config.ARGB_8888, true);
 			
 	 	    String json_obj_0 = loadJSONFromAsset(ctx,"data-west-6.json");
@@ -161,6 +161,9 @@ public class Particle
     		magneticmapem = new MapGenerator(json_obj_1, 17,3);
  			magneticmapwm.run();
 	        magneticmapem.run();
+	        maxX = getmMapWidth();
+			maxY = getmMapHeight();
+			
 	        
 	        //set the Angle Algorithm 
 	        angle_algo = algorithm; 
@@ -280,7 +283,7 @@ public class Particle
 		@Override
 		public void updateLocation(double step_size, double rad_angle, double turn_angle)
 		{						
-			System.out.println("update");
+			System.out.println("update-amm");
 			inside_particles = new Particle[particles.length];
 			oldParticles = new Particle[particles.length];					
 			len = particles.length;
@@ -655,39 +658,54 @@ public class Particle
 			}
 		}			
 	
+		@Override
 		public void setParticleCount (float pc) {
 			 particleCount = (int) pc;
 		}
-		    
+		
+		@Override
 		public void setSenseNoise (float sen) {
 			  msenseNoise = (double)sen;
 		}
-			
+		
+		@Override
 		public void setStepNoise (float ste) {
 			  mstepNoise = (double)ste;
 		}
-			
+		
+		@Override		
 		public void setTurnNoise (float tun) {
 			  mturnNoise = (double)(tun/mul);
 		}		
+		
+		@Override
 		public float getParticleCount () {
 		   return ((float)particleCount);
 		}
 	    
+		@Override
 		public float getSenseNoise () {
 			return ((float)msenseNoise);
 		}
 		
+		@Override
 		public float getStepNoise () {
 			return ((float)mstepNoise);
 		}
 		
+		@Override
 		public float getTurnNoise () {
 			return ((float)(mul*mturnNoise));
 			
 		}
 		
+		@Override
 		public double getMMSE() {
 			return  mmse;
 		}
+	
+		@Override
+		public String getPath() {
+	       return STORAGE_DIR_B;
+	     }
 };

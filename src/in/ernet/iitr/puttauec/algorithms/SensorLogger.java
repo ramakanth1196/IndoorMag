@@ -20,7 +20,8 @@ import android.util.Log;
 
 public class SensorLogger implements IAlgorithm, ISensorCallback {
 
-	private static final String SAMPLES_DIR = Environment.getExternalStorageDirectory() + File.separator + "samples";
+	private static final String SAMPLES_DIR = Environment.getExternalStorageDirectory() + File.separator + "samples_exp";
+	private static final String STORAGE_DIR =  SAMPLES_DIR + File.separator + "slog";	
 	private static final int STOPPED = 0;
 	private static final int STARTED = 1;
 	private static final int PAUSED = 2;
@@ -154,7 +155,7 @@ public class SensorLogger implements IAlgorithm, ISensorCallback {
 		String r = (String) (DateFormat.format("yyyy-MM-dd-hh-mm-ss", new java.util.Date()) );
 		FileWriter f = null;
 		try {
-			f = new FileWriter(new File(SAMPLES_DIR, dataType + "-" + r + "." + extension));
+			f = new FileWriter(new File(STORAGE_DIR, dataType + "-" + r + "." + extension));
 		} catch (IOException e) {
 			e.printStackTrace();
 			Log.e(TAG, "File couldn't be opened for writing!");

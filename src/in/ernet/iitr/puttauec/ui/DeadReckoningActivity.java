@@ -69,9 +69,8 @@ public class DeadReckoningActivity extends Activity {
 		Log.i(TAG, "Starting DeadReckoningActivity with reckoning method: " + method);
 		mDeadReckoning = new DeadReckoning(this);
 		intent = new Intent(this, BroadcastService.class);
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 	}
-   
+		
 	 private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
 	        @Override
 	        public void onReceive(Context context, Intent intent) {
@@ -156,7 +155,7 @@ public class DeadReckoningActivity extends Activity {
 		case DEAD_RECKONING_LOG_PATH:
 			Date now = new Date(System.currentTimeMillis());
 			try {
-				FileWriter pathLoggingFile = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples", "drPathLog." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now) + ".csv"));
+				FileWriter pathLoggingFile = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples_exp" +File.separator + "dr", "drPathLog." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now) + ".csv"));
 				ArrayList<float[]> path = mDeadReckoning.getmPath();
 				for(float[] p : path) {
 					pathLoggingFile.write(p[0] + "," + p[1] + "\n");
@@ -235,7 +234,7 @@ public class DeadReckoningActivity extends Activity {
 		            				
 		            				Date now = new Date(System.currentTimeMillis());
 		            				try {
-		            					FileWriter stepDistance = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples", "stepDistance." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now)));
+		            					FileWriter stepDistance = new FileWriter(new File(Environment.getExternalStorageDirectory() + File.separator + "samples_exp" + File.separator + "dr", "stepDistance." + DateFormat.format("yyyy-MM-dd-kk-mm-ss", now)));
 			            				stepDistance.write("" + now.getTime() + "," + + numSteps + "," + actualDistance + "," + estimatedDistance + "," + distancePerStep + "," + trainingConstant + "\n");
 			            				stepDistance.flush();
 										stepDistance.close();

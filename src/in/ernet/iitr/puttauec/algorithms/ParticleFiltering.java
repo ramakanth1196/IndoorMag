@@ -32,10 +32,10 @@ public class ParticleFiltering extends DeadReckoning {
 	   private static final double INIT_SD_Y = 0.4;
 	   private static final double X_SD = 1.4;	   	  	   
 	   private static final double Y_SD = 1.4;	   	  
-	   private static final double  minX  = 0.0  ; 
-	   private static  double  maxX  = 16.0 ;  
-	   private static final double  minY  = 0.0 ;  
-	   private static final double  maxY  = 26.0 ; 
+	   private static double  minX  = 0.0  ; 
+	   private static double  maxX  = 14.0 ;  
+	   private static double  minY  = 0.0 ;  
+	   private static double  maxY  = 26.0 ; 
 	   private static final double mul =(180/Math.PI);
 	  // private static final double xoffset = 12.8375610466;
 	  // private static final double yoffset = -0.0999689574027;
@@ -156,7 +156,7 @@ public class Particle
 		public ParticleFiltering(Context ctx, IAngleAlgorithm algorithm) {
 			super(ctx);   
 			//Load the indoor Map
-			mFloorPlan = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.library4);
+			mFloorPlan = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.library5);
 			mFloorPlan = mFloorPlan.copy(Config.ARGB_8888, true);
 			
 	 	    String json_obj_0 = loadJSONFromAsset(ctx,"data-west-6.json");
@@ -182,12 +182,19 @@ public class Particle
 	        // Do a white removal in the Indoor Map (Bit Map)
 			floorPlanWidth = mFloorPlan.getWidth();
 			floorPlanHeight = mFloorPlan.getHeight();
+			
+			System.out.println("fph" + floorPlanHeight);
+			System.out.println("fpw" + floorPlanWidth);
+			
+			maxX = getmMapWidth();
+			maxY = getmMapHeight();
 			for(int x = 0; x < floorPlanWidth; ++x) {
 				for(int y = 0; y < floorPlanHeight; ++y) {
 					if(mFloorPlan.getPixel(x, y) == Color.WHITE)
 						mFloorPlan.setPixel(x, y, Color.WHITE - mFloorPlan.getPixel(x, y));
 				}
 			}	
+			
 		}
 	
 		/**
@@ -274,7 +281,7 @@ public class Particle
 			try {
 					String r = (String) (DateFormat.format("yyyy-MM-dd-hh-mm-ss", new java.util.Date()) );
 					String logFileBaseName = "pfLog." + r;
-					mNoiseFileWriter = new FileWriter(new File(SAMPLES_DIR, logFileBaseName + ".noise.csv"));
+					mNoiseFileWriter = new FileWriter(new File(STORAGE_DIR_A, logFileBaseName + ".noise.csv"));
 					mNoiseFileWriter.write(""+ mstepNoise + ","+ msenseNoise +","+ mturnNoise + "," + mAccelThreshold + "," + mTrainingConstant + "\n");
 					mNoiseFileWriter.flush();
 					mNoiseFileWriter.close();					
@@ -309,11 +316,11 @@ public class Particle
 		@Override
 		public void updateLocation(double step_size, double rad_angle, double turn_angle)
 		{						
-			System.out.println("update");
+			System.out.println("update-avm");
 			inside_particles = new Particle[particles.length];
 			oldParticles = new Particle[particles.length];					
 			len = particles.length;
-			double px, py ,est,act;	
+			double px, py ,est,act , angle_dev = 0.0;	
 			double max_weight = 0.0;						
 			orien = 0.0;
 			int in_len = 0;
@@ -323,13 +330,16 @@ public class Particle
 				}
 			for(int i = 0; i < particleCount ; ++i) 
 				{							
+				    
 					particles[i].move(step_size,rad_angle,theta_adj);
+					System.out.println("old" + oldParticles[i]);
+					System.out.println("new" + particles[i]);
 					orien += angle;
 					px = particles[i].x;
 					py = particles[i].y;		
 					max_weight = 0.0;
 					Cost = transitionCost(oldParticles[i],particles[i]);
-					act = measurement[0]*measurement[0] + measurement[1]*measurement[1] +measurement[2]*measurement[2];			   	
+					act = measurement[0]*measurement[0] + measurement[1]*measurement[1] + measurement[2]*measurement[2];			   	
 					if(Math.abs(Cost) < 1e-4) 
 					{
 						if(px >= 0.0 && px <= maxX && py >= 0.0 && py <= maxY)
@@ -377,17 +387,19 @@ public class Particle
 					// Re-sampling stage: don't go here unless you get lost!!!
 					// Retry with lesser accuracy particles
 					for(int i = 0; i < particleCount; ++i) {
-						Particle disturbedParticle = new Particle(oldParticles[i].x + (X_SD*rand.nextGaussian()), oldParticles[i].y + (Y_SD*rand.nextGaussian()),oldParticles[i].importance_weight);
+						angle_dev = rad_angle + (45/mul)*rand.nextGaussian();						
+						Particle disturbedParticle = new Particle(oldParticles[i].x + (X_SD*Math.sin(angle_dev)), oldParticles[i].y + (Y_SD*Math.cos(angle_dev)),oldParticles[i].importance_weight);
 						while( transitionCost(oldParticles[i], disturbedParticle) > MAX_ACCEPTABLE_TRANSITION_COST)
-							{ disturbedParticle = new Particle(oldParticles[i].x + (X_SD*rand.nextGaussian()), oldParticles[i].y + (Y_SD*rand.nextGaussian()),oldParticles[i].importance_weight);							
+							{  angle_dev = rad_angle + (45/mul)*rand.nextGaussian();							
+							   disturbedParticle = new Particle(oldParticles[i].x + (X_SD*Math.sin(angle_dev)), oldParticles[i].y + (Y_SD*Math.cos(angle_dev)),oldParticles[i].importance_weight);							
 							}
 						particles[i] = disturbedParticle;
 					}
 				}		
-			
+		theta_adj = 0;
 			// adjusting particle motion to minimize the particle loss.
-			theta_adj = 0;
-			for(int j = 0; j < in_len; ++j) 
+		if(in_len  < (9*particleCount)/10)
+	     {  for(int j = 0; j < in_len; ++j) 
 				{
 				 	theta_adj += inside_particles[j].theta_noise; 
 				}
@@ -395,7 +407,8 @@ public class Particle
 				{ 
 					theta_adj /= in_len;
 				}
-			mmse = minimumMeanSquareDistance();			
+	     }
+		 mmse = minimumMeanSquareDistance();			
 			if(this.isLogging()) 
 				{
 					try {
@@ -439,14 +452,16 @@ public class Particle
 			y = (int) Math.round(stopY);
 			if(x >= 0 && x < floorPlanWidth && y >= 0 && y < floorPlanHeight) 
 			{ 	pixel = mFloorPlan.getPixel(x,y);
-			    maxRed = Color.red(pixel); 
+			    maxRed = Color.red(pixel);
+			    System.out.println("red" + x + y);			    
 				if( maxRed == 255)
 				  { return maxRed/255.0f;}
 			}		
 			else 
-			{
-				return 1.0f; 				
+			{   return 1.0f; 				
 			}					
+			
+			System.out.println("");			
 			
 			int numSteps = (int) Math.round(Math.max(Math.abs(deltaX),Math.abs(deltaY)));			
 			if(numSteps != 0)
@@ -457,7 +472,8 @@ public class Particle
 			maxRed = 0;			
 			for(int step = 0 ; step < numSteps; step++)
 			{	x = (int) Math.round( startX+ step*deltaX);
-				y = (int) Math.round( startY + step*deltaY);							
+				y = (int) Math.round( startY + step*deltaY);	
+		
 				if(x >= 0 && x < floorPlanWidth && y >= 0 && y < floorPlanHeight) {
 					pixel = mFloorPlan.getPixel(x,y);				
 					maxRed = Math.max(maxRed,Color.red(pixel));					
@@ -737,4 +753,9 @@ public class Particle
 		public double getMMSE() {
 			return  mmse;
 		}
+		
+		@Override
+		public String getPath() {
+	       return STORAGE_DIR_A;
+	     }
 };

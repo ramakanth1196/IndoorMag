@@ -1,6 +1,7 @@
 package in.ernet.iitr.puttauec.algorithms;
 
 import in.ernet.iitr.puttauec.R;
+import in.ernet.iitr.puttauec.algorithms.ParticleFilteringAHRSVec.Particle;
 import in.ernet.iitr.puttauec.sensorutil.MapGenerator;
 import in.ernet.iitr.puttauec.sensorutil.RandomSingleton;
 
@@ -32,11 +33,11 @@ public class ParticleFilteringKalman extends DeadReckoning {
 	   private static final double INIT_SD_Y = 0.4;	  
 	   private static final double X_SD = 1.4;
 	   private static final double Y_SD = 1.4;	   	  
-	   private static final double  minX  = 0.0  ; 
-	   private static  double  maxX  = 16.0 ;  
-	   private static final double  minY  = 0.0 ;  
-	   private static final double  maxY  = 26.0 ; 
-	   private static final double mul =(180/Math.PI);
+	   private static double  minX  = 0.0  ; 
+	   private static double  maxX  = 14.0 ;  
+	   private static double  minY  = 0.0 ;  
+	   private static double  maxY  = 26.0 ; 
+	      private static final double mul =(180/Math.PI);
 	  // private static final double xoffset = 12.8375610466;
 	  // private static final double yoffset = -0.0999689574027;
 	   
@@ -63,7 +64,8 @@ public class ParticleFilteringKalman extends DeadReckoning {
 	   private static double mstepNoise = DEFAULT_STEP_NOISE_THRESHOLD/1000.f;      // Sense noise used in Co-variance matrix of Vector Gaussian
 	   private static double mturnNoise = DEFAULT_TURN_NOISE_THRESHOLD/1000.f;	    // Turn noise for particles used in dynamical equations
 	   private static double mmse = 0.0;                                            // MMSE of the particles at each update location step from estimated position.
-
+       private double angle_dev = 0.0;
+	   
 	   //log file writers
 	   private static final double MAX_ACCEPTABLE_TRANSITION_COST = 1e-4;
 	   protected Bitmap mFloorPlan;
@@ -156,6 +158,10 @@ public class Particle
     		magneticmapem = new MapGenerator(json_obj_1, 17,3);
  			magneticmapwm.run();
 			magneticmapem.run();
+			
+			maxX = getmMapWidth();
+			maxY = getmMapHeight();
+			
 	        
 	        //set the Angle Algorithm 
 	        angle_algo = algorithm; 
@@ -257,7 +263,7 @@ public class Particle
 		@Override
 		public void updateLocation(double step_size, double rad_angle, double turn_angle)
 		{						
-			System.out.println("update");
+			System.out.println("update-ak");
 			inside_particles = new Particle[particles.length];
 			oldParticles = new Particle[particles.length];					
 			len = particles.length;
@@ -314,12 +320,16 @@ public class Particle
 					// Re-sampling stage: don't go here unless you get lost!!!
 					// Retry with lesser accuracy particles
 					for(int i = 0; i < particleCount; ++i) {
-						Particle disturbedParticle = new Particle(oldParticles[i].x + (X_SD*rand.nextGaussian()), oldParticles[i].y + (Y_SD*rand.nextGaussian()),oldParticles[i].importance_weight);
+						angle_dev = rad_angle + (45/mul)*rand.nextGaussian();						
+						Particle disturbedParticle = new Particle(oldParticles[i].x + (X_SD*Math.sin(angle_dev)), oldParticles[i].y + (Y_SD*Math.cos(angle_dev)),oldParticles[i].importance_weight);
 						px = disturbedParticle.x;
-						py = disturbedParticle.y;
-						while(!(px >= 0.0 && px <= maxX && py >= 0.0 && py <= maxY))
-							{ disturbedParticle = new Particle(oldParticles[i].x + (X_SD*rand.nextGaussian()), oldParticles[i].y + (Y_SD*rand.nextGaussian()),oldParticles[i].importance_weight);							
-							}
+						py = disturbedParticle.y;					
+						while(!(px >= 0.0 && px <= maxX && py >= 0.0 && py <= maxY))						
+						{   	angle_dev = rad_angle + (45/mul)*rand.nextGaussian();							
+						    	disturbedParticle = new Particle(oldParticles[i].x + (X_SD*Math.sin(angle_dev)), oldParticles[i].y + (Y_SD*Math.cos(angle_dev)),oldParticles[i].importance_weight);
+						    	px = disturbedParticle.x;
+						    	py = disturbedParticle.y;							
+						}
 						particles[i] = disturbedParticle;
 					}
 				}		
@@ -560,40 +570,55 @@ public class Particle
 				particles[i].y = mStartY + (float)(INIT_SD_Y*rand.nextGaussian());
 			}
 		}			
-	
+       
+		@Override
 		public void setParticleCount (float pc) {
 			 particleCount = (int) pc;
 		}
-		    
+		
+		@Override
 		public void setSenseNoise (float sen) {
 			  msenseNoise = (double)sen;
 		}
-			
+		
+		@Override
 		public void setStepNoise (float ste) {
 			  mstepNoise = (double)ste;
 		}
-			
+		
+		@Override		
 		public void setTurnNoise (float tun) {
 			  mturnNoise = (double)(tun/mul);
 		}		
+		
+		@Override
 		public float getParticleCount () {
 		   return ((float)particleCount);
 		}
 	    
+		@Override
 		public float getSenseNoise () {
 			return ((float)msenseNoise);
 		}
 		
+		@Override
 		public float getStepNoise () {
 			return ((float)mstepNoise);
 		}
 		
+		@Override
 		public float getTurnNoise () {
 			return ((float)(mul*mturnNoise));
 			
 		}
 		
+		@Override
 		public double getMMSE() {
 			return  mmse;
 		}
+		
+		@Override
+		public String getPath() {
+	       return STORAGE_DIR_C;
+	     }
 };
